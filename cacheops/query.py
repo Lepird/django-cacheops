@@ -248,20 +248,25 @@ class QuerySetMixin(object):
             return clone
 
     def iterator(self):
+        print('hitting custom iterator func for %s.%s' % (self.model._meta.app_label, get_model_name(self.model)))
         # TODO: do not cache empty queries in Django 1.6
         superiter = self._no_monkey.iterator
         cache_this = self._cacheprofile and 'fetch' in self._cacheconf['ops']
 
         if cache_this:
+            print('this is a cached model')
             cache_key = self._cache_key()
             if not self._cacheconf['write_only'] and not self._for_write:
                 # Trying get data from cache
                 cache_data = redis_client.get(cache_key)
                 if cache_data is not None:
+                    print('returning cached data')
                     results = pickle.loads(cache_data)
                     for obj in results:
                         yield obj
                     raise StopIteration
+        else:
+            print('this is NOT a cached model')
 
         # Cache miss - fallback to overriden implementation
         results = []
@@ -272,6 +277,7 @@ class QuerySetMixin(object):
 
         if cache_this:
             self._cache_results(cache_key, results)
+            print('caching the objects')
         raise StopIteration
 
     def count(self):
