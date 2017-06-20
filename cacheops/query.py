@@ -281,20 +281,27 @@ class QuerySetMixin(object):
         raise StopIteration
 
     def count(self):
+        print('hitting custom count func for %s.%s' % (self.model._meta.app_label, get_model_name(self.model)))
         if self._cacheprofile and 'count' in self._cacheconf['ops']:
+            print('this is a cached model')
             # Optmization borrowed from overriden method:
             # if queryset cache is already filled just return its len
             # NOTE: there is no self._iter in Django 1.6+, so we use getattr() for compatibility
             if self._result_cache is not None and not getattr(self, '_iter', None):
+                print('returning cached data')
                 return len(self._result_cache)
+            print('caching the objects')
             return cached_as(self)(lambda: self._no_monkey.count(self))()
         else:
+            print('this is NOT a cached model')
             return self._no_monkey.count(self)
 
     def get(self, *args, **kwargs):
+        # print('hitting custom get func for %s.%s' % (self.model._meta.app_label, get_model_name(self.model)))
         # .get() uses the same .iterator() method to fetch data,
         # so here we add 'fetch' to ops
         if self._cacheprofile and 'get' in self._cacheconf['ops']:
+            # print('this is a cached model')
             # NOTE: local_get=True enables caching of simple gets in local memory,
             #       which is very fast, but not invalidated.
             # Don't bother with Q-objects, select_related and previous filters,
@@ -317,21 +324,29 @@ class QuerySetMixin(object):
                     pass
 
             if 'fetch' in self._cacheconf['ops']:
+                # print('fetch already in ops')
                 qs = self
             else:
+                # print('fetch NOT in ops')
                 qs = self._clone().cache()
         else:
+            # print('this is NOT a cached model')
             qs = self
 
         return qs._no_monkey.get(qs, *args, **kwargs)
 
     if django.VERSION >= (1, 6):
         def exists(self):
+            print('hitting custom exists func for %s.%s' % (self.model._meta.app_label, get_model_name(self.model)))
             if self._cacheprofile and 'exists' in self._cacheconf['ops']:
+                print('this is a cached model')
                 if self._result_cache is not None:
+                    print('returning cached data')
                     return bool(self._result_cache)
+                print('caching the objects')
                 return cached_as(self)(lambda: self._no_monkey.exists(self))()
             else:
+                print('this is NOT a cached model')
                 return self._no_monkey.exists(self)
 
     if django.VERSION >= (1, 5):
